@@ -1,6 +1,7 @@
 from tkinter import *
 from tkinter import messagebox
 import random
+import json
 
 FONT = ("Arial", 10, "normal")
 
@@ -15,8 +16,6 @@ def generate_password():
                'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z']
     numbers = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']
     symbols = ['!', '#', '$', '%', '&', '(', ')', '*', '+']
-
-
 
     nr_letters = random.randint(8, 10)
     nr_symbols = random.randint(2, 4)
@@ -41,19 +40,50 @@ def save():
     website = website_entry.get()
     name = name_entry.get()
     password = pass_entry.get()
+    new_data = {
+        website: {
+            "name": name,
+            "password": password,
+        }
+    }
 
     if len(website) == 0 or len(name) == 0 or len(password) == 0:
         messagebox.showinfo(title="Warning!", message="invalid data")
     else:
-        is_ok = messagebox.askokcancel(title=website,
-                                       message=f"New entry: \nEmail/Username: {name}\nPassword: {password} \nDo you want to save it?")
+        try:
+            with open("data.json", "r") as data_file:
+                data = json.load(data_file)
+        except FileNotFoundError:
+            with open("data.json", "w") as data_file:
+                json.dump(new_data, data_file, indent=4)
+        else:
+            data.update(new_data)
 
-        if is_ok:
-            with open("data.txt", "a") as data_file:
-                data_file.write(f"\n{website} | {name} | {password}")
-                website_entry.delete(0, END)
-                name_entry.delete(0, END)
-                pass_entry.delete(0, END)
+            with open("data.json", "w") as data_file:
+                json.dump(new_data, data_file, indent=4)
+
+        finally:
+            website_entry.delete(0, END)
+            name_entry.delete(0, END)
+            pass_entry.delete(0, END)
+
+
+# ---------------------------- FIND PASS ------------------------------- #
+
+def find_password():
+    website = website_entry.get()
+    try:
+        with open("data.json") as data_file:
+            data = json.load(data_file)
+    except FileNotFoundError:
+        messagebox.showinfo(title="Error", message="No Data File Found.")
+    else:
+        if website in data:
+            name = data[website]["name"]
+            password = data[website]["password"]
+            messagebox.showinfo(title=website, message=f"Email/Username: {name}\nPassword: {password}")
+        else:
+            messagebox.showinfo(title="Error", message=f"No details for {website} exists.")
 
 
 # ---------------------------- UI SETUP ------------------------------- #
@@ -76,8 +106,8 @@ pass_label = Label(text="Password:", font=FONT)
 pass_label.grid(column=0, row=3)
 
 # Entries
-website_entry = Entry(width=50)
-website_entry.grid(column=1, row=1, columnspan=2)
+website_entry = Entry(width=32)
+website_entry.grid(column=1, row=1)
 website_entry.focus()
 name_entry = Entry(width=50)
 name_entry.grid(column=1, row=2, columnspan=2)
@@ -85,6 +115,8 @@ pass_entry = Entry(width=32)
 pass_entry.grid(column=1, row=3)
 
 # Buttons
+search_button = Button(text="Search", width=14, command=find_password)
+search_button.grid(row=1, column=2)
 pass_gen_button = Button(text="Generate Password", command=generate_password)
 pass_gen_button.grid(column=2, row=3)
 add_button = Button(text="Add", width=42, command=save)
